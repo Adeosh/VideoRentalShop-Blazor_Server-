@@ -1,0 +1,68 @@
+﻿@page "/UpdateGenre/{id:int}"
+
+@inject IDbContextFactory<DataContext> ContextFactory
+@inject NavigationManager NavigationManager
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+
+        <div class="form-control d-flex flex-column m-auto text-center" style="max-width:900px">
+            <h4>Обновить @_updateGenre.Name</h4>
+
+            <label for="name" class="form-label">Название</label>
+            <input id="name" type="text" class="form-input form-control" @bind-value="_updateGenre.Name" />
+
+            <label for="description" class="form-label">Описание жанра</label>
+            <input id="description" type="text" class="form-input form-control" @bind-value="_updateGenre.Description" />
+
+
+        </div>
+
+        <div class="w-100 text-center p-5"><button class="btn btn-success btn-lg" @onclick="UpdateGenreAsync">Обновить жанр</button></div>
+        <div class="w-100 text-center p-5">
+            <div class="alert-success">@validationMessage</div>
+        </div>
+
+    </Authorized>
+
+    <NotAuthorized>
+        <div>Не авторизован</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    Genre _updateGenre = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+        {
+            _updateGenre = await repo.GetGenreByIdAsync(Id);
+        }
+    }
+
+    string validationMessage = "";
+
+    async Task ResetValidationMessage()
+    {
+        await Task.Delay(2000);
+        validationMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task UpdateGenreAsync()
+    {
+        using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+        {
+            await repo.UpdateGenreAsync(_updateGenre);
+        }
+        validationMessage = "Жанр успешно обновлён!";
+        await InvokeAsync(StateHasChanged);
+        await ResetValidationMessage();
+
+        NavigationManager.NavigateTo($"/ManageGenres");
+    }
+}

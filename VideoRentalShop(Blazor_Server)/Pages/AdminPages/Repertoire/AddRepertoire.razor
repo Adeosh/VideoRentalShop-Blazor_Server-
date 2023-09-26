@@ -1,0 +1,132 @@
+﻿@page "/AddRepertoire"
+
+@inject IDbContextFactory<DataContext> ContextFactory
+@inject NavigationManager NavigationManager
+
+<AuthorizeView Roles="Admin">
+    <Authorized Context="AuthContext">
+
+        <EditForm Model="_createRepertoire" OnValidSubmit="SaveRepertoireAsync">
+            <div class="form-control d-flex flex-column m-auto text-center" style="max-width:900px">
+                <h4>Добавить кино\сериал</h4>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <label for="title" class="form-label">Название</label>
+                <InputText id="title" type="text" class="form-input form-control" @bind-Value="_createRepertoire.Title" />
+                <ValidationMessage For="@(() => _createRepertoire.Title)" />
+
+                <label for="director" class="form-label">Режиссёр</label>
+                <InputText id="director" type="text" class="form-input form-control" @bind-Value="_createRepertoire.Director" />
+                <ValidationMessage For="@(() => _createRepertoire.Director)" />
+
+                <label for="country" class="form-label">Страна</label>
+                <InputText id="country" type="text" class="form-input form-control" @bind-Value="_createRepertoire.Country" />
+                <ValidationMessage For="@(() => _createRepertoire.Country)" />
+
+                <label for="description" class="form-label">Описание фильма</label>
+                <InputText id="description" type="text" class="form-input form-control" @bind-Value="_createRepertoire.Description" />
+                <ValidationMessage For="@(() => _createRepertoire.Description)" />
+
+                <label for="studio" class="form-label">Студия</label>
+                <InputText id="studio" type="text" class="form-input form-control" @bind-Value="_createRepertoire.Studio" />
+                <ValidationMessage For="@(() => _createRepertoire.Studio)" />
+
+                <label for="release-date" class="form-label">Дата выхода</label>
+                <InputNumber id="release-date" type="number" class="form-input form-control" @bind-Value="_createRepertoire.ReleaseDate" />
+                <ValidationMessage For="@(() => _createRepertoire.ReleaseDate)" />
+
+                <label for="price" class="form-label">Цена</label>
+                <InputNumber id="price" type="number" class="form-input form-control" @bind-Value="_createRepertoire.Price" />
+                <ValidationMessage For="@(() => _createRepertoire.Price)" />
+
+                <label for="quantity" class="form-label">Кол-во</label>
+                <InputNumber id="quantity" type="number" class="form-input form-control" @bind-Value="_createRepertoire.Quantity" />
+                <ValidationMessage For="@(() => _createRepertoire.Quantity)" />
+
+                <label for="image" class="form-label">Изображение</label>
+                <InputText id="image" type="text" class="form-input form-control" @bind-Value="_createRepertoire.Image" />
+                <ValidationMessage For="@(() => _createRepertoire.Image)" />
+
+                <div class="size_block">
+                    @foreach (var genre in _genres)
+                    {
+                        <label><input type="checkbox" @onchange="@(e => HandleCheckChanged(e, genre))" /> @genre.Name</label>
+                    }
+                </div>
+                <a target="_blank" href="AddGenre">Добавить жанр</a>
+
+            </div>
+
+            <div class="w-100 text-center p-5"><button class="btn btn-success btn-lg">Сохранить кино\сериал</button></div>
+            <div class="w-100 text-center p-5">
+                <div class="alert-success">@validationMessage</div>
+            </div>
+        </EditForm>
+
+    </Authorized>
+
+    <NotAuthorized>
+        <div>Не авторизован</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    Repertoire _createRepertoire = new Repertoire();
+
+    List<Genre> _genres = new();
+    List<RepertoireGenre> _repertoireGenre = new();
+    List<RepertoireGenre> _repertoireGenres = new List<RepertoireGenre>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+        {
+            _genres = await repo.GetAllGenresAsync();
+        }
+    }
+
+    string validationMessage = "";
+
+    async Task ResetValidationMessage()
+    {
+        await Task.Delay(2000);
+        validationMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task SaveRepertoireAsync()
+    {
+        using (var repo = new RepertoireRepository(ContextFactory.CreateDbContext()))
+        {
+            await repo.CreateRepertoireAsync(_createRepertoire);
+        }
+        _createRepertoire = new Repertoire();
+        validationMessage = "Кино\\Сериал добавлен успешно!";
+        await InvokeAsync(StateHasChanged);
+        await ResetValidationMessage();
+
+        NavigationManager.NavigateTo($"/ManageRepertoire");
+    }
+
+    void HandleCheckChanged(ChangeEventArgs e, Genre genre)
+    {
+        bool isChecked = (bool)e.Value;
+
+        if (isChecked)
+        {
+            _repertoireGenres.Add(new RepertoireGenre
+                {
+                    RepertoireId = _createRepertoire.Id,
+                    GenreId = genre.Id
+                });
+            _createRepertoire.RepertoireGenres = _repertoireGenres;
+        }
+        else
+        {
+            _repertoireGenres.RemoveAll(rg => rg.GenreId == genre.Id);
+            _createRepertoire.RepertoireGenres = _repertoireGenres;
+        }
+    }
+}

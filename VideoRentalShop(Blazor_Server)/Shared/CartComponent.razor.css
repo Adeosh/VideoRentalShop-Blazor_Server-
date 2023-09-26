@@ -1,0 +1,80 @@
+﻿.overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0,0,0,0.7);
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease-in-out;
+}
+
+    .overlay.open {
+        opacity: 1;
+        transition: all 0.3s ease-in-out;
+    }
+
+.side-cart {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 400px;
+    height: 100%;
+    background: white;
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 1001;
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 1px 0px 29px 0px rgba(0,0,0,0.28);
+    transition: all 0.3s;
+}
+
+    .side-cart.open {
+        animation: slideIn 0.3s;
+        transition: all 0.3s
+    }
+
+    .side-cart.closed {
+        animation: slideOut 0.3s;
+        opacity: 0;
+        transition: all 0.3s
+    }
+
+@keyframes slideIn {
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.products {
+    height: 75vh;
+    overflow-y: scroll;
+    overflow-y: hidden;
+}
+
+.product-name {
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.table {
+    width: 300px;
+}

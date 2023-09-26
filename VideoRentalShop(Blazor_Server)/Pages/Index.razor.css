@@ -1,0 +1,62 @@
+﻿#top-nav {
+    position: relative;
+    top: 0;
+    display: flex;
+    justify-content: start;
+    padding-block: 5px;
+    padding-inline: 50px;
+    border-bottom: solid 1px gray;
+    gap: 30px;
+    color: royalblue;
+    font-family: 'Segoe UI';
+    font-size: 16px;
+}
+
+.fs-small {
+    font-size: 14px;
+}
+
+.fs-normal {
+    font-size: 16px;
+}
+
+.fs-big {
+    font-size: 18px;
+}
+
+.page-conteiner {
+    max-width: 1250px;
+    margin: 20px auto;
+}
+
+#repertoire {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-width: 100%;
+}
+
+.repertoire-title {
+    margin-block: 5px;
+}
+
+.repertoire-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 200px;
+    overflow: hidden;
+}
+
+.repertoire-cover {
+    height: 300px;
+    width: 200px;
+    object-fit: cover;
+    box-shadow: 1px 0px 29px rgba(0,0,0,0.21);
+    transition: all 0.3s;
+}
+
+    .repertoire-cover:hover {
+        transform: scale(1.03);
+        transition: all 0.3s;
+    }

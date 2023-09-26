@@ -1,0 +1,161 @@
+﻿@page "/"
+
+@inject IDbContextFactory<DataContext> ContextFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationState
+@inject UserManager<ApplicationUser> UserManager
+@inject CartService CartService
+
+<PageTitle>Index</PageTitle>
+
+<CartComponent User="_user" CartItems="@_cartItems"></CartComponent>
+
+<div id="top-nav" class="fs-small">
+    <div @onclick="AllRepertoire" role="button" class="m-auto">Весь репертуар</div>
+    <div @onclick="ToggleGenreDropDown" role="button" class="m-auto dropdown-toggle">
+        Жанры
+        @if (isGenreDropDownOpen)
+        {
+            <div class="dropdown-menu dropdown-menu-right show position-absolute">
+                @foreach (var genre in _genres)
+                {
+                    <div @onclick="async () => await SelectGenre(genre)" class="dropdown-item fs-small">@genre.Name</div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="w-100">
+        <SearchBox Items="_repertoire" OnSearch="UpdateFilteredRepertoire"></SearchBox>
+    </div>
+
+</div>
+
+<div class="page-container">
+    @if (_selectGenre.Name != null)
+    {
+        <div class="genre my-5">
+            <div class="genre-title fs-big my-2">@_selectGenre.Name</div>
+            <div class="genre-description fs-small">@_selectGenre.Description</div>
+        </div>
+    }
+    else
+    {
+        <div class="genre my-5">
+            <div class="genre-title fs-big my-2">Весь репертуар</div>
+        </div>
+    }
+</div>
+
+<div id="repertoire">
+    @foreach (var repertoire in _filteredRepertoire)
+    {
+        <div class="repertoire-container">
+            <img class="repertoire-cover" role="button" @onclick="()=> GoToRepertoirePage(repertoire.Id)" src="@repertoire.Image" />
+            <div class="repertoire-title fs-normal fw-bold" role="button" @onclick="()=> GoToRepertoirePage(repertoire.Id)">@repertoire.Title</div>
+            <div class="repertoire-price text-center my-2" role="button">@repertoire.Price.ToString("C2")</div>
+
+            <AuthorizeView>
+                <Authorized>
+                    <button @onclick="async () => await AddToCartAsync(repertoire)" class="btn btn-success btn-sm mb-3">Добавить в корзину</button>
+                </Authorized>
+
+                <NotAuthorized>
+                    <a role="button" href="Identity/Account/Login" class="btn btn-success btn-sm mb-3">Добавить в корзину</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+
+    }
+</div>
+
+@code {
+    List<Repertoire> _repertoire = new();
+    List<Repertoire> _filteredRepertoire = new();
+    List<Genre> _genres = new();
+    Genre _selectGenre = new();
+    ApplicationUser _user = new();
+    List<CartItem> _cartItems = new();
+
+    void AllRepertoire()
+    {
+        _filteredRepertoire = _repertoire.ToList();
+        _selectGenre = new Genre();
+    }
+
+    bool isGenreDropDownOpen = false;
+    void ToggleGenreDropDown()
+    {
+        isGenreDropDownOpen = !isGenreDropDownOpen;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var repo = new RepertoireRepository(ContextFactory.CreateDbContext()))
+        {
+            _repertoire = await repo.GetAllRepertoireAsync();
+            _filteredRepertoire = _repertoire.ToList();
+        }
+
+        using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+        {
+            _genres = await repo.GetAllGenresAsync();
+        }
+        var authState = await AuthenticationState.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity.IsAuthenticated)
+        {
+            using (var repo = new UserRepository(
+                   ContextFactory.CreateDbContext(),
+                   UserManager,
+                   AuthenticationState))
+            {
+                _user = await repo.GetUserAsync();
+            }
+        }
+    }
+
+    async Task AddToCartAsync(Repertoire repertoire)
+    {
+        using (var repo = new UserRepository(
+                   ContextFactory.CreateDbContext(),
+                   UserManager,
+                   AuthenticationState))
+        {
+            var item = await repo.AddToCartAsync(repertoire, _user);
+            await repo.UpdateItem(item);
+
+            _user = await repo.GetUserAsync();
+            _cartItems = _user.Cart.CartItems.ToList();
+        }
+
+        await InvokeAsync(StateHasChanged);
+        CartService.ShowCart = true;
+    }
+
+    async Task SelectGenre(Genre genre)
+    {
+        _selectGenre = genre;
+        _filteredRepertoire = _repertoire.Where(b => b.RepertoireGenres.Any(bg => bg.Genre.Id == genre.Id)).ToList();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void UpdateFilteredRepertoire(string search)
+    {
+        if (string.IsNullOrEmpty(search))
+        {
+            _filteredRepertoire = _repertoire.ToList();
+        }
+        else
+        {
+            _filteredRepertoire = _repertoire.Where(repertoire => 
+                repertoire.Title.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    void GoToRepertoirePage(int id)
+    {
+        NavigationManager.NavigateTo($"/RepertoirePage/{id}");
+    }
+}

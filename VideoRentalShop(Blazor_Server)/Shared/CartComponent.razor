@@ -1,0 +1,147 @@
+﻿@inject IDbContextFactory<DataContext> ContextFactory
+@inject AuthenticationStateProvider AuthenticationState
+@inject UserManager<ApplicationUser> UserManager
+@inject CartService CartService
+@inject NavigationManager NavigationManager
+
+<div style="display:@(CartService.ShowCart ? "block" : "none")">
+    <div class="overlay @(CartService.StartAnimation ? "" : "open")" @onclick="async() => await Hidecart()"></div>
+    <div class="side-cart @(CartService.StartAnimation ? "closed" : "open")">
+        <div class="d-flex flex-row w-100 justify-content-between">
+            <div>Ваша Корзина</div>
+            <div role="button" class="close" @onclick="async() => await Hidecart()"><i class="oi oi-circle-x"></i></div>
+        </div>
+
+        <div class="products">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Содержимое</th>
+                        <th></th>
+                        <th>Цена</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in CartItems)
+                    {
+                        <tr>
+                            <td><img src="@item.Repertoire.Image" width="100" /></td>
+                            <td>
+                                <div class="product-name">@item.Repertoire.Title</div>
+                                <div class="product-price">@item.Repertoire.Price.ToString("C2")</div>
+                                <div class="d-flex justify-content-between gap-4">
+                                    <div class="quantity">
+                                        <i @onclick="async() => await ChangeQuantity(-1, item)" role="button" class="oi oi-minus sign"></i>
+                                        <span class="quantity-value">@item.Quantity</span>
+                                        <i @onclick="async() => await ChangeQuantity(1, item)" role="button" class="oi oi-plus sign"></i>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div>
+                                        @((item.Repertoire.Price * item.Quantity).ToString("C2"))
+                                    </div>
+                                    <div>
+                                        <i role="button" @onclick="async() => await RemoveItemAsync(item)" class="oi oi-trash"></i>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="order">
+            <div class="d-flex flex-row justify-content-between"></div>
+            <div>Общая сумма</div>
+            <div>@CalculateOrderSum().ToString("C2")</div>
+        </div>
+        <div>
+            <button class="btn btn-success w-100" @onclick="GoToOrderPage">Заказать</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<CartItem> CartItems { get; set; } = new();
+
+    [Parameter]
+    public ApplicationUser User { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        CartService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        CartService.OnChange -= StateHasChanged;
+    }
+
+    private async Task Hidecart()
+    {
+        CartService.StartAnimation = true;
+        await Task.Delay(300);
+        CartService.ShowCart = false;
+        CartService.StartAnimation = false;
+    }
+
+    async Task ChangeQuantity(int number, CartItem item)
+    {
+        if ((item.Quantity <= 1 && number < 0))
+        {
+            return;
+        }
+        item.Quantity += number;
+        using (var repo = new UserRepository(
+            ContextFactory.CreateDbContext(),
+            UserManager,
+            AuthenticationState))
+        {
+            await repo.UpdateItem(item);
+        }
+        CartItems = User.Cart.CartItems.ToList();
+    }
+
+    async Task RemoveItemAsync(CartItem item)
+    {
+        using (var repo = new UserRepository(
+            ContextFactory.CreateDbContext(),
+            UserManager,
+            AuthenticationState))
+        {
+            await repo.RemoveItemFromCart(item);
+            CartItems.Remove(item);
+        }
+    }
+
+    decimal CalculateOrderSum()
+    {
+        decimal total = 0;
+
+        foreach (var item in CartItems)
+        {
+            total += item.Quantity * item.Repertoire.Price;
+        }
+        return total;
+    }
+
+    async Task GoToOrderPage()
+    {
+        using (var repo = new UserRepository(
+            ContextFactory.CreateDbContext(),
+            UserManager,
+            AuthenticationState))
+        {
+            foreach (var item in CartItems)
+            {
+                await repo.RemoveItemFromCart(item);
+            }
+            CartItems.Clear();
+        }
+
+        NavigationManager.NavigateTo("/OrderPage");
+    }
+}

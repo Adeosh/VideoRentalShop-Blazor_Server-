@@ -1,0 +1,134 @@
+﻿@page "/UpdateRepertoire/{id:int}"
+
+@inject IDbContextFactory<DataContext> ContextFactory
+@inject NavigationManager NavigationManager
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+
+        <div class="form-control d-flex flex-column m-auto text-center" style="max-width:900px">
+            <h4>Редактировать @_updateRepertoire.Title</h4>
+
+            <label for="title" class="form-label">Название</label>
+            <input id="title" type="text" class="form-input form-control" @bind-value="_updateRepertoire.Title" />
+
+            <label for="director" class="form-label">Режиссёр</label>
+            <input id="director" type="text" class="form-input form-control" @bind-value="_updateRepertoire.Director" />
+
+            <label for="country" class="form-label">Страна</label>
+            <input id="country" type="text" class="form-input form-control" @bind-value="_updateRepertoire.Country" />
+
+            <label for="description" class="form-label">Описание фильма</label>
+            <input id="description" type="text" class="form-input form-control" @bind-value="_updateRepertoire.Description" />
+
+            <label for="studio" class="form-label">Студия</label>
+            <input id="studio" type="text" class="form-input form-control" @bind-value="_updateRepertoire.Studio" />
+
+            <label for="release-date" class="form-label">Дата выхода</label>
+            <input id="release-date" type="number" class="form-input form-control" @bind-value="_updateRepertoire.ReleaseDate" />
+
+            <label for="price" class="form-label">Цена</label>
+            <input id="price" type="number" class="form-input form-control" @bind-value="_updateRepertoire.Price" />
+
+            <label for="stock-quantity" class="form-label">Кол-во</label>
+            <input id="stock-quantity" type="number" class="form-input form-control" @bind-value="_updateRepertoire.Quantity" />
+
+            <div class="d-flex flex-row w-100 justify-content-between">
+                <div class="d-flex flex-column w-75">
+                    <label for="image" class="form-label">Book Cover Url</label>
+                    <input id="image" type="text" class="form-input form-control" @bind-value="_updateRepertoire.Image" />
+                </div>
+            </div>
+            <img height="200" src="@_updateRepertoire.Image" />
+
+            <div class="size_block">
+                @foreach (var genre in _genres)
+                {
+                    <label>
+                        <input checked="@_updateRepertoire.RepertoireGenres.Any(rg => rg.GenreId == genre.Id)"
+                               type="checkbox" @onchange="@(e => HandleCheckChanged(e, genre))" />
+                         @genre.Name</label>
+                }
+            </div>
+            <a target="_blank" href="AddGenre">Добавить жанр</a>
+
+        </div>
+
+        <div class="w-100 text-center p-5"><button class="btn btn-success btn-lg" @onclick="async()=> await UpdateRepertoireAsync()">Редактировать кино\сериал</button></div>
+        <div class="w-100 text-center p-5">
+            <div class="alert-success">@validationMessage</div>
+        </div>
+
+    </Authorized>
+
+    <NotAuthorized>
+        <div>Не авторизован</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    Repertoire _updateRepertoire = new Repertoire();
+
+    List<Genre> _genres = new();
+    List<RepertoireGenre> _repertoireGenre = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+        {
+            _genres = await repo.GetAllGenresAsync();
+        }
+
+        using (var repo = new RepertoireRepository(ContextFactory.CreateDbContext()))
+        {
+            _updateRepertoire = await repo.GetRepertoireByIdAsync(Id);
+            _repertoireGenre = _updateRepertoire.RepertoireGenres.ToList();
+        }
+    }
+
+    string validationMessage = "";
+
+    async Task ResetValidationMessage()
+    {
+        await Task.Delay(2000);
+        validationMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task UpdateRepertoireAsync()
+    {
+        using (var repo = new RepertoireRepository(ContextFactory.CreateDbContext()))
+        {
+            await repo.UpdateRepertoireAsync(_updateRepertoire);
+        }
+
+        validationMessage = "Кино\\Сериал успешно обновлён";
+        await InvokeAsync(StateHasChanged);
+        await ResetValidationMessage();
+
+        NavigationManager.NavigateTo($"/ManageRepertoire");
+    }
+
+    void HandleCheckChanged(ChangeEventArgs e, Genre genre)
+    {
+        bool isChecked = (bool)e.Value;
+
+        if (isChecked)
+        {
+            _repertoireGenre.Add(new RepertoireGenre
+                {
+                    RepertoireId = _updateRepertoire.Id,
+                    GenreId = genre.Id
+                });
+            _updateRepertoire.RepertoireGenres = _repertoireGenre;
+        }
+        else
+        {
+            _repertoireGenre.RemoveAll(rg => rg.GenreId == genre.Id);
+            _updateRepertoire.RepertoireGenres = _repertoireGenre;
+        }
+    }
+}

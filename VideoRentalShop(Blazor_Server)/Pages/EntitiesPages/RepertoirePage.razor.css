@@ -1,0 +1,24 @@
+﻿.page-container {
+    max-width: 1250px;
+    margin: 20px auto;
+}
+
+#repertoire-cover {
+    height: 300px;
+    width: 200px;
+    object-fit: cover;
+    box-shadow: 1px 0px 29px 0px rgba(0,0,0,0.21);
+    transition: all 0.3s;
+}
+
+.fs-small {
+    font-size: 18px;
+}
+
+.fs-normal {
+    font-size: 25px;
+}
+
+.fs-big {
+    font-size: 50px;
+}

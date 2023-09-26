@@ -1,0 +1,97 @@
+﻿@page "/ManageGenres"
+
+@inject IDbContextFactory<DataContext> ContextFactory
+@inject NavigationManager NavigationManager
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+
+        <div class="container d-flex flex-column w-100 text-center">
+            <div class="fs-4">Управление Жанрами</div>
+
+            <div style="max-width:500px;" class="d-flex flex-column gap-2 my-3 align-self-center">
+                <NavLink class="btn btn-success" href="AddGenre">Добавить Жанр</NavLink>
+            </div>
+        </div>
+
+        <div class="w-100">
+            <SearchBox Items="_genre" OnSearch="UpdateFilteredGenres"></SearchBox>
+        </div>
+
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание жанра</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var genre in _filteredGenre)
+                {
+                    <tr>
+                        <td>@genre.Name</td>
+                        <td>@genre.Description</td>
+
+                        <td>
+                            <div class="text-center d-flex flex-column justify-content-center h-100">
+                                <button style="min-width:90px;" @onclick="()=> GoToUpdateGenrePage(genre.Id)" class="btn btn-primary my-1">Редактировать</button>
+                                <button style="min-width:90px;" @onclick=" ()=> DeleteGenre(genre.Id)" class="btn btn-danger my-1">Удалить</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+    </Authorized>
+
+    <NotAuthorized>
+        <div>Не авторизован</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    List<Genre> _genre = new();
+    List<Genre> _filteredGenre = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+        {
+            _genre = await repo.GetAllGenresAsync();
+            _filteredGenre = _genre.ToList();
+        }
+    }
+
+    async Task DeleteGenre(int id)
+    {
+        if (_genre.Any(a => a.Id == id))
+        {
+            using (var repo = new GenreRepository(ContextFactory.CreateDbContext()))
+            {
+                _genre.Remove(_genre.FirstOrDefault(b => b.Id == id));
+                await repo.DeleteGenreAsync(id);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    void UpdateFilteredGenres(string search)
+    {
+        if (string.IsNullOrEmpty(search))
+        {
+            _filteredGenre = _genre.ToList();
+        }
+        else
+        {
+            _filteredGenre = _genre.Where(gerne => 
+                gerne.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    async Task GoToUpdateGenrePage(int id)
+    {
+        NavigationManager.NavigateTo($"/UpdateGenre/{id}");
+    }
+}

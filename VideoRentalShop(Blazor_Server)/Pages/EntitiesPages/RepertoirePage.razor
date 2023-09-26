@@ -1,0 +1,83 @@
+﻿@page "/RepertoirePage/{id:int}"
+
+@inject IDbContextFactory<DataContext> ContextFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationState
+@inject UserManager<ApplicationUser> UserManager
+@inject CartService CartService
+
+<CartComponent User="_user" CartItems="@_cartItems"></CartComponent>
+
+<div class="page-container">
+    @if (_repertoire != null)
+    {
+        <div class="d-flex gap-4">
+            <img id="repertoire-cover" src="@_repertoire.Image" />
+            <div class="d-flex flex-column">
+                <div class="repertoire-title fs-normal">@_repertoire.Title.</div>
+                <div class="repertoire-description">@_repertoire.Description.</div>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <button @onclick="async () => await AddToCartAsync(_repertoire)" class="btn btn-success btn-sm mb-5">Добавить в корзину</button>
+                    </Authorized>
+
+                    <NotAuthorized>
+                        <a role="button" href="Identity/Account/Login" class="btn btn-success btn-sm mb-3">Добавить в корзину</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    Repertoire _repertoire = new();
+    ApplicationUser _user = new();
+    List<CartItem> _cartItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var repo = new RepertoireRepository(ContextFactory.CreateDbContext()))
+        {
+            _repertoire = await repo.GetRepertoireByIdAsync(Id);
+        }
+
+        var authState = await AuthenticationState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            using (var repo = new UserRepository(
+                   ContextFactory.CreateDbContext(),
+                   UserManager,
+                   AuthenticationState))
+            {
+                _user = await repo.GetUserAsync();
+                _cartItems = _user.Cart.CartItems.ToList();
+            }
+        }
+    }
+
+    async Task AddToCartAsync(Repertoire repertoire)
+    {
+        using (var repo = new UserRepository(
+                   ContextFactory.CreateDbContext(),
+                   UserManager,
+                   AuthenticationState))
+        {
+            var item = await repo.AddToCartAsync(repertoire, _user);
+            await repo.UpdateItem(item);
+
+            _user = await repo.GetUserAsync();
+            _cartItems = _user.Cart.CartItems.ToList();
+        }
+
+        await InvokeAsync(StateHasChanged);
+        CartService.ShowCart = true;
+    }
+}
