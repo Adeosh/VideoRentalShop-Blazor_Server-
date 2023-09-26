@@ -14,10 +14,6 @@
             </div>
         </div>
 
-        <div class="w-100">
-            <SearchBox Items="_repertoire" OnSearch="UpdateFilteredRepertoire"></SearchBox>
-        </div>
-
         <div class="p-3">
             <table class="my-4 table table-striped table-hover">
                 <thead>
@@ -75,14 +71,12 @@
 
 @code {
     List<Repertoire> _repertoire = new();
-    List<Repertoire> _filteredRepertoire = new();
 
     protected override async Task OnInitializedAsync()
     {
         using (var repo = new RepertoireRepository(ContextFactory.CreateDbContext()))
         {
             _repertoire = await repo.GetAllRepertoireAsync();
-            _filteredRepertoire = _repertoire.ToList();
         }
     }
 
@@ -99,20 +93,7 @@
         }
     }
 
-    void UpdateFilteredRepertoire(string search)
-    {
-        if (string.IsNullOrEmpty(search))
-        {
-            _filteredRepertoire = _repertoire.ToList();
-        }
-        else
-        {
-            _filteredRepertoire = _repertoire.Where(repertoire =>
-                repertoire.Title.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-    }
-
-    async Task GoToUpdateRepertoirePage(int id)
+    void GoToUpdateRepertoirePage(int id)
     {
         NavigationManager.NavigateTo($"/UpdateRepertoire/{id}");
     }
